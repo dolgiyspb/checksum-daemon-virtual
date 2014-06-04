@@ -5,12 +5,25 @@ __author__ = 'alex'
 import hashlib
 import pprint
 import argparse
-
+import os
+import shutil
 
 def generateMd5CheckSum(path):
     with open(path.strip(), 'r') as file:
         return {"path": path.strip(), "checksum": hashlib.md5(file.read()).hexdigest()}
 
+def createBackupCopy(backupPath, pathToFile):
+    fullPath = os.path.normpath(backupPath)+"/"+os.path.normpath(pathToFile)
+    createPathIfNotExist(os.path.dirname(fullPath))
+    shutil.copy(pathToFile, fullPath)
+
+def createBackupCopys(path, list):
+    for file in list:
+        createBackupCopy(path, file["path"])
+
+def createPathIfNotExist(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
 
 def getFilesPathsAndChecksumsFromFile(filename):
     with open(filename, 'r') as file:
@@ -23,8 +36,11 @@ def writeChecksumsInFile(path, checksumsList):
         pprint.pprint(checksumsList, file)
 
 
-def generateFile(listFilePath, checkSumFilePath):
-    writeChecksumsInFile(checkSumFilePath, getFilesPathsAndChecksumsFromFile(listFilePath))
+def generateFile(args):
+    filesList = getFilesPathsAndChecksumsFromFile(args.listFile)
+    writeChecksumsInFile(args.checkSumFile, filesList)
+    createBackupCopys(args.backupPath, filesList)
+
 
 
 def main():
@@ -34,11 +50,11 @@ def main():
                         help=u'Путь к файлу, хранящему список путей файлов для контроля целостности')
     parser.add_argument('-c', '--cpath', dest='checkSumFile', required=True, action='store',
                         help=u'Путь к файлу, в который будет сохранен список файлов с контрольными суммами')
+    parser.add_argument('-b', '--bpath', dest='backupPath', required=True, action='store',
+                        help=u'Путь, относительно которого будут сохраняться резервные копии файлов')
     args = parser.parse_args()
-    generateFile(args.listFile, args.checkSumFile)
+    generateFile(args)
 
 
 if __name__ == "__main__":
     main()
-
-
